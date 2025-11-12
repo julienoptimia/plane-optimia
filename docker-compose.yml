@@ -150,20 +150,25 @@ services:
       context: ./apps/proxy
       dockerfile: Dockerfile.ce
     restart: always
-    ports:
-      - ${LISTEN_HTTP_PORT}:80
-      - ${LISTEN_HTTPS_PORT}:443
+  # ❌ pas d'exposition de ports, Traefik s'en charge
     environment:
       FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT:-5242880}
       BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-uploads}
+      SITE_ADDRESS: ${SITE_ADDRESS}
+
     depends_on:
       - web
       - api
       - space
       - admin
-
-volumes:
-  pgdata:
-  redisdata:
-  uploads:
-  rabbitmq_data:
+   labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.routers.plane.rule=Host(`projects.optimia.io`)"
+      - "traefik.http.routers.plane.entrypoints=websecure"
+      - "traefik.http.routers.plane.tls.certresolver=letsencrypt"
+      # le proxy interne Plane écoute en 80
+      - "traefik.http.services.plane.loadbalancer.server.port=80"
+    networks:
+  traefik_network:
+    external: true
