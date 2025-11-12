@@ -85,7 +85,7 @@ services:
       dockerfile: Dockerfile.api
       args:
         DOCKER_BUILDKIT: 1
-    restart: no
+    restart: "no"
     command: ./bin/docker-entrypoint-migrator.sh
     depends_on:
       - plane-db
@@ -143,14 +143,13 @@ services:
       MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
 
-  # Comment this if you already have a reverse proxy running
+  # Traefik termine le TLS et route vers ce service (port 80 interne)
   proxy:
     container_name: proxy
     build:
       context: ./apps/proxy
       dockerfile: Dockerfile.ce
     restart: always
-    # pas d'exposition de ports, Traefik s'en charge
     environment:
       FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT:-5242880}
       BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-uploads}
@@ -169,6 +168,7 @@ services:
       - "traefik.http.services.plane.loadbalancer.server.port=80"
     networks:
       - traefik_network
+      - default
 
 volumes:
   pgdata:
