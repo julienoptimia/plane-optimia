@@ -170,5 +170,7 @@ services:
       # le proxy interne Plane écoute en 80
       - "traefik.http.services.plane.loadbalancer.server.port=80"
     networks:
+      - traefik_network
+networks:
   traefik_network:
     external: true
