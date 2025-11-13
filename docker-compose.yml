@@ -47,6 +47,24 @@ services:
       - plane-db
       - plane-redis
       - plane-mq
+    environment:
+      # URLs attendues par Plane
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      AMQP_URL: ${AMQP_URL}
+      # URL publique & CORS
+      SITE_ADDRESS: ${SITE_ADDRESS}
+      CORS_ALLOWED_ORIGINS: ${SITE_ADDRESS}
+      # Stockage
+      USE_MINIO: ${USE_MINIO}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      MINIO_ENDPOINT_SSL: ${MINIO_ENDPOINT_SSL}
+      FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT}
+      API_KEY_RATE_LIMIT: ${API_KEY_RATE_LIMIT}
 
   worker:
     container_name: bgworker
@@ -62,6 +80,20 @@ services:
       - plane-db
       - plane-redis
       - plane-mq
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      AMQP_URL: ${AMQP_URL}
+      SITE_ADDRESS: ${SITE_ADDRESS}
+      USE_MINIO: ${USE_MINIO}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      MINIO_ENDPOINT_SSL: ${MINIO_ENDPOINT_SSL}
+      FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT}
+      API_KEY_RATE_LIMIT: ${API_KEY_RATE_LIMIT}
 
   beat-worker:
     container_name: beatworker
@@ -77,6 +109,20 @@ services:
       - plane-db
       - plane-redis
       - plane-mq
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      AMQP_URL: ${AMQP_URL}
+      SITE_ADDRESS: ${SITE_ADDRESS}
+      USE_MINIO: ${USE_MINIO}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      MINIO_ENDPOINT_SSL: ${MINIO_ENDPOINT_SSL}
+      FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT}
+      API_KEY_RATE_LIMIT: ${API_KEY_RATE_LIMIT}
 
   migrator:
     container_name: plane-migrator
@@ -88,9 +134,25 @@ services:
     restart: "no"
     command: ./bin/docker-entrypoint-migrator.sh
     depends_on:
-      - plane-db
-      - plane-redis
-      - plane-mq
+      plane-db:
+        condition: service_healthy
+      plane-redis:
+        condition: service_started
+      plane-mq:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      AMQP_URL: ${AMQP_URL}
+      SITE_ADDRESS: ${SITE_ADDRESS}
+      USE_MINIO: ${USE_MINIO}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      MINIO_ENDPOINT_SSL: ${MINIO_ENDPOINT_SSL}
+      FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT}
 
   live:
     container_name: plane-live
@@ -113,6 +175,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   plane-redis:
     container_name: plane-redis
@@ -120,6 +187,11 @@ services:
     restart: always
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   plane-mq:
     container_name: plane-mq
@@ -131,6 +203,11 @@ services:
       RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   plane-minio:
     container_name: plane-minio
@@ -173,7 +250,7 @@ services:
       - "traefik.http.services.plane.loadbalancer.server.port=80"
       - "traefik.http.services.plane.loadbalancer.server.scheme=http"
 
-      # >>> Propager les entêtes "forwarded" pour éviter les boucles
+      # Propager les entêtes "forwarded" pour éviter les boucles
       - "traefik.http.middlewares.plane-forward.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.middlewares.plane-forward.headers.customrequestheaders.X-Forwarded-Port=443"
       - "traefik.http.middlewares.plane-forward.headers.customrequestheaders.X-Forwarded-Host=projects.optimia.io"
